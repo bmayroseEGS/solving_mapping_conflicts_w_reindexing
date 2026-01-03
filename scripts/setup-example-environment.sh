@@ -205,15 +205,15 @@ print_info "✓ Index template 'logs-filestream.generic-default' created"
 echo ""
 
 ################################################################################
-# Create First Backing Index with CORRECT Mapping (long)
+# Create First Backing Index with INCORRECT Mapping (keyword)
 ################################################################################
 print_header "Creating Data Stream with Mapping Conflict"
 
-echo "Step 1: Ingesting documents with log.offset as long (correct per ECS)..."
+echo "Step 1: Ingesting documents with log.offset as keyword (incorrect)..."
 
-# Ingest documents with numeric values - Elasticsearch will map as long
+# Ingest documents with string values - Elasticsearch will map as keyword
+# This simulates data arriving BEFORE proper mappings were defined
 for i in {1..5}; do
-  OFFSET=$((1000 + i * 100))
   curl -s -X POST -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
     "$ELASTICSEARCH_URL/logs-filestream.generic-default/_doc" \
     -H "Content-Type: application/json" \
@@ -221,7 +221,7 @@ for i in {1..5}; do
     \"@timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",
     \"message\": \"Log message $i from first batch\",
     \"log\": {
-      \"offset\": $OFFSET
+      \"offset\": \"offset_$i\"
     },
     \"host\": {
       \"name\": \"server-01\"
@@ -233,11 +233,11 @@ for i in {1..5}; do
   sleep 0.1
 done
 
-print_info "✓ Ingested 5 documents with log.offset as long (numeric values)"
+print_info "✓ Ingested 5 documents with log.offset as keyword (string values)"
 echo ""
 
-# Create second backing index manually with keyword mapping
-echo "Step 2: Creating second backing index with keyword mapping..."
+# Create second backing index manually with correct long mapping
+echo "Step 2: Creating second backing index with long mapping..."
 
 # Get the current backing index name to generate the next one
 FIRST_INDEX=$(curl -s -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
@@ -250,7 +250,7 @@ SECOND_INDEX="${INDEX_BASE}-000002"
 
 echo "Creating backing index: $SECOND_INDEX"
 
-# Create the second backing index with explicit keyword mapping for log.offset
+# Create the second backing index with explicit long mapping for log.offset
 curl -s -X PUT -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
   "$ELASTICSEARCH_URL/$SECOND_INDEX" \
   -H "Content-Type: application/json" \
@@ -271,7 +271,7 @@ curl -s -X PUT -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
       },
       \"log\": {
         \"properties\": {
-          \"offset\": { \"type\": \"keyword\" }
+          \"offset\": { \"type\": \"long\" }
         }
       }
     }
@@ -293,7 +293,7 @@ curl -s -X POST -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
   ]
 }" >/dev/null
 
-print_info "✓ Second backing index created with keyword mapping"
+print_info "✓ Second backing index created with long mapping (correct per ECS)"
 echo ""
 
 ################################################################################
@@ -301,8 +301,9 @@ echo ""
 ################################################################################
 echo "Step 3: Ingesting documents into second backing index..."
 
-# Ingest directly into the second backing index with string values
+# Ingest directly into the second backing index with numeric values
 for i in {6..10}; do
+  OFFSET=$((1000 + i * 100))
   curl -s -X POST -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
     "$ELASTICSEARCH_URL/$SECOND_INDEX/_doc" \
     -H "Content-Type: application/json" \
@@ -310,7 +311,7 @@ for i in {6..10}; do
     \"@timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",
     \"message\": \"Log message $i from second batch\",
     \"log\": {
-      \"offset\": \"offset_$i\"
+      \"offset\": $OFFSET
     },
     \"host\": {
       \"name\": \"server-02\"
@@ -322,10 +323,10 @@ for i in {6..10}; do
   sleep 0.1
 done
 
-print_info "✓ Ingested 5 documents with log.offset as keyword (string values)"
+print_info "✓ Ingested 5 documents with log.offset as long (numeric values)"
 print_warning "  MAPPING CONFLICT CREATED!"
-print_warning "  First backing index: log.offset is 'long'"
-print_warning "  Second backing index: log.offset is 'keyword'"
+print_warning "  First backing index: log.offset is 'keyword' (incorrect - from dynamic mapping)"
+print_warning "  Second backing index: log.offset is 'long' (correct per ECS)"
 echo ""
 
 ################################################################################
@@ -388,13 +389,18 @@ if [ "$LOG_OFFSET_TYPE" != "$SECOND_LOG_OFFSET_TYPE" ]; then
     print_warning "MAPPING CONFLICT DETECTED!"
     echo ""
     echo "  First index ($FIRST_INDEX):"
-    echo "    log.offset type: $LOG_OFFSET_TYPE"
+    echo "    log.offset type: $LOG_OFFSET_TYPE (from dynamic mapping)"
     echo ""
     echo "  Second index ($SECOND_INDEX):"
-    echo "    log.offset type: $SECOND_LOG_OFFSET_TYPE"
+    echo "    log.offset type: $SECOND_LOG_OFFSET_TYPE (correct per ECS)"
     echo ""
-    echo "This conflict will cause issues with:"
-    echo "  • Kibana data views showing a warning icon"
+    echo "This matches the blog scenario where:"
+    echo "  • Data arrived BEFORE mappings were properly defined"
+    echo "  • Elasticsearch used dynamic templates (mapped as keyword)"
+    echo "  • Later indices have correct mapping (long)"
+    echo ""
+    echo "This conflict causes issues with:"
+    echo "  • Kibana data views showing a warning icon (⚠️)"
     echo "  • Aggregations on log.offset field"
     echo "  • Visualizations using this field"
     echo "  • The Security app if using this field"
@@ -420,8 +426,13 @@ echo "  • Index template: 'logs-filestream.generic-default'"
 echo "  • Data stream: 'logs-filestream.generic-default'"
 echo "  • $BACKING_INDICES backing indices with $TOTAL_DOCS total documents"
 echo "  • Mapping conflict: log.offset has different types across indices"
-echo "    - First index: 'long' (correct per ECS)"
-echo "    - Second index: 'keyword' (incorrect)"
+echo "    - First index: 'keyword' (incorrect - from dynamic mapping)"
+echo "    - Second index: 'long' (correct per ECS)"
+echo ""
+echo "This simulates the blog scenario:"
+echo "  → Data ingested BEFORE @custom component template was created"
+echo "  → Elasticsearch dynamically mapped log.offset as 'keyword'"
+echo "  → Later, correct mapping defined → newer indices use 'long'"
 echo ""
 echo "Access Kibana to view the conflict:"
 echo ""
@@ -431,13 +442,13 @@ echo "Steps to see the conflict:"
 echo "  1. Go to: Stack Management → Data Views"
 echo "  2. Create data view for pattern: logs-filestream.generic-default*"
 echo "  3. Look for the warning icon (⚠️) on 'log.offset' field"
-echo "  4. Click the field to see the type conflict across indices"
+echo "  4. You should see: 'keyword, long Conflict'"
 echo ""
 echo "Practice the resolution workflow:"
 echo "  1. Review: ../README.md for the complete reindexing procedure"
 echo "  2. The goal: Make all indices use 'long' type for log.offset (ECS standard)"
-echo "  3. Create @custom component template with correct mapping"
-echo "  4. Reindex the second backing index (keyword) to use 'long'"
+echo "  3. Create @custom component template with correct 'long' mapping"
+echo "  4. Reindex the FIRST backing index (keyword) to use 'long'"
 echo "  5. Verify document counts match"
 echo "  6. Delete old backing index with keyword mapping"
 echo ""
