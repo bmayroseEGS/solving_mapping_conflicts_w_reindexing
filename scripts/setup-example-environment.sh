@@ -218,10 +218,14 @@ FIRST_INDEX=".ds-logs-filestream.generic-default-${CURRENT_DATE}-000001"
 echo "Creating backing index: $FIRST_INDEX"
 
 # Create the first backing index with explicit keyword mapping for log.offset
+# This must be a valid data stream backing index (needs @timestamp and proper settings)
 curl -s -X PUT -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
   "$ELASTICSEARCH_URL/$FIRST_INDEX" \
   -H "Content-Type: application/json" \
   -d "{
+  \"settings\": {
+    \"index.hidden\": true
+  },
   \"mappings\": {
     \"properties\": {
       \"@timestamp\": { \"type\": \"date\" },
@@ -245,11 +249,8 @@ curl -s -X PUT -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
   }
 }" >/dev/null
 
-# Create the data stream and add the first backing index
-curl -s -X PUT -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
-  "$ELASTICSEARCH_URL/_data_stream/logs-filestream.generic-default" >/dev/null 2>&1 || true
-
-# Add the first backing index to the data stream
+# Create the data stream by adding the first backing index via _modify
+# This creates the data stream without creating a default backing index
 curl -s -X POST -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
   "$ELASTICSEARCH_URL/_data_stream/_modify" \
   -H "Content-Type: application/json" \
@@ -262,7 +263,7 @@ curl -s -X POST -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
       }
     }
   ]
-}" >/dev/null 2>&1 || true
+}" >/dev/null
 
 # Ingest documents with string values
 for i in {1..5}; do
@@ -302,6 +303,9 @@ curl -s -X PUT -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
   "$ELASTICSEARCH_URL/$SECOND_INDEX" \
   -H "Content-Type: application/json" \
   -d "{
+  \"settings\": {
+    \"index.hidden\": true
+  },
   \"mappings\": {
     \"properties\": {
       \"@timestamp\": { \"type\": \"date\" },
