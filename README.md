@@ -77,8 +77,10 @@ This script will:
 
 **What gets created:**
 - Data stream: `logs-filestream.generic-default`
-- Mapping conflict: `log.offset` mapped as `keyword` (should be `long`)
-- 10 sample documents across 2 backing indices
+- Mapping conflict: `log.offset` has different types across backing indices
+  - First backing index: `log.offset` as `long` (correct per ECS)
+  - Second backing index: `log.offset` as `keyword` (incorrect)
+- 10 sample documents (5 in each backing index)
 
 After running the setup script, follow the **Basic Reindexing Workflow** below to practice resolving the conflict.
 

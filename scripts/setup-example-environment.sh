@@ -205,14 +205,15 @@ print_info "✓ Index template 'logs-filestream.generic-default' created"
 echo ""
 
 ################################################################################
-# Create First Backing Index with Incorrect Mapping (keyword)
+# Create First Backing Index with CORRECT Mapping (long)
 ################################################################################
 print_header "Creating Data Stream with Mapping Conflict"
 
-echo "Step 1: Ingesting documents with log.offset as keyword (incorrect)..."
+echo "Step 1: Ingesting documents with log.offset as long (correct per ECS)..."
 
-# Ingest documents that will cause log.offset to be mapped as keyword
+# Ingest documents with numeric values - Elasticsearch will map as long
 for i in {1..5}; do
+  OFFSET=$((1000 + i * 100))
   curl -s -X POST -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
     "$ELASTICSEARCH_URL/logs-filestream.generic-default/_doc" \
     -H "Content-Type: application/json" \
@@ -220,7 +221,7 @@ for i in {1..5}; do
     \"@timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",
     \"message\": \"Log message $i from first batch\",
     \"log\": {
-      \"offset\": \"offset_$i\"
+      \"offset\": $OFFSET
     },
     \"host\": {
       \"name\": \"server-01\"
@@ -232,7 +233,7 @@ for i in {1..5}; do
   sleep 0.1
 done
 
-print_info "✓ Ingested 5 documents with log.offset as keyword"
+print_info "✓ Ingested 5 documents with log.offset as long (numeric values)"
 echo ""
 
 # Rollover to create second backing index
@@ -246,10 +247,11 @@ print_info "✓ Data stream rolled over"
 echo ""
 
 ################################################################################
-# Create Second Backing Index with Incorrect Mapping (still keyword from dynamic)
+# Create Second Backing Index with INCORRECT Mapping (keyword)
 ################################################################################
-echo "Step 3: Ingesting more documents with log.offset as keyword..."
+echo "Step 3: Ingesting documents with log.offset as keyword (CONFLICT!)..."
 
+# Ingest documents with string values - Elasticsearch will map as keyword
 for i in {6..10}; do
   curl -s -X POST -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
     "$ELASTICSEARCH_URL/logs-filestream.generic-default/_doc" \
@@ -270,8 +272,10 @@ for i in {6..10}; do
   sleep 0.1
 done
 
-print_info "✓ Ingested 5 more documents with log.offset as keyword"
-print_warning "  Mapping conflict created: log.offset is 'keyword' but should be 'long' per ECS"
+print_info "✓ Ingested 5 documents with log.offset as keyword (string values)"
+print_warning "  MAPPING CONFLICT CREATED!"
+print_warning "  First backing index: log.offset is 'long'"
+print_warning "  Second backing index: log.offset is 'keyword'"
 echo ""
 
 ################################################################################
@@ -313,15 +317,40 @@ LOG_OFFSET_TYPE=$(echo "$MAPPING" | grep -A 5 '"offset"' | grep '"type"' | head 
 echo "  log.offset type: $LOG_OFFSET_TYPE"
 echo ""
 
-if [ "$LOG_OFFSET_TYPE" = "keyword" ]; then
-    print_warning "CONFLICT DETECTED!"
+echo ""
+echo "Checking second backing index..."
+
+SECOND_INDEX=$(curl -s -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
+  "$ELASTICSEARCH_URL/_data_stream/logs-filestream.generic-default" | \
+  grep -o '"name":"\.ds-logs-filestream\.generic-default[^"]*"' | tail -1 | cut -d'"' -f4)
+
+echo "Second backing index: $SECOND_INDEX"
+
+SECOND_MAPPING=$(curl -s -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
+  "$ELASTICSEARCH_URL/$SECOND_INDEX/_mapping")
+
+SECOND_LOG_OFFSET_TYPE=$(echo "$SECOND_MAPPING" | grep -A 5 '"offset"' | grep '"type"' | head -1 | sed 's/.*"type"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+
+echo "  log.offset type: $SECOND_LOG_OFFSET_TYPE"
+echo ""
+
+if [ "$LOG_OFFSET_TYPE" != "$SECOND_LOG_OFFSET_TYPE" ]; then
+    print_warning "MAPPING CONFLICT DETECTED!"
     echo ""
-    echo "  Current mapping: log.offset is 'keyword'"
-    echo "  Expected (ECS):  log.offset should be 'long'"
+    echo "  First index ($FIRST_INDEX):"
+    echo "    log.offset type: $LOG_OFFSET_TYPE"
     echo ""
-    echo "This is the mapping conflict you will practice resolving!"
+    echo "  Second index ($SECOND_INDEX):"
+    echo "    log.offset type: $SECOND_LOG_OFFSET_TYPE"
+    echo ""
+    echo "This conflict will cause issues with:"
+    echo "  • Kibana data views showing a warning icon"
+    echo "  • Aggregations on log.offset field"
+    echo "  • Visualizations using this field"
+    echo "  • The Security app if using this field"
 else
-    print_info "log.offset type: $LOG_OFFSET_TYPE"
+    print_info "Both indices have matching type: $LOG_OFFSET_TYPE"
+    print_warning "Note: For ECS compliance, log.offset should be 'long'"
 fi
 
 echo ""
@@ -340,7 +369,9 @@ echo "  • Component template: 'logs@package'"
 echo "  • Index template: 'logs-filestream.generic-default'"
 echo "  • Data stream: 'logs-filestream.generic-default'"
 echo "  • $BACKING_INDICES backing indices with $TOTAL_DOCS total documents"
-echo "  • Mapping conflict: log.offset is 'keyword' (should be 'long')"
+echo "  • Mapping conflict: log.offset has different types across indices"
+echo "    - First index: 'long' (correct per ECS)"
+echo "    - Second index: 'keyword' (incorrect)"
 echo ""
 echo "Access Kibana to view the conflict:"
 echo ""
@@ -349,16 +380,16 @@ echo ""
 echo "Steps to see the conflict:"
 echo "  1. Go to: Stack Management → Data Views"
 echo "  2. Create data view for pattern: logs-filestream.generic-default*"
-echo "  3. Look for the warning icon on 'log.offset' field"
+echo "  3. Look for the warning icon (⚠️) on 'log.offset' field"
 echo "  4. Click the field to see the type conflict across indices"
 echo ""
 echo "Practice the resolution workflow:"
 echo "  1. Review: ../README.md for the complete reindexing procedure"
-echo "  2. Check ECS: log.offset should be type 'long'"
+echo "  2. The goal: Make all indices use 'long' type for log.offset (ECS standard)"
 echo "  3. Create @custom component template with correct mapping"
-echo "  4. Reindex each backing index with corrected mapping"
+echo "  4. Reindex the second backing index (keyword) to use 'long'"
 echo "  5. Verify document counts match"
-echo "  6. Delete old backing indices"
+echo "  6. Delete old backing index with keyword mapping"
 echo ""
 echo "Useful commands:"
 echo ""
