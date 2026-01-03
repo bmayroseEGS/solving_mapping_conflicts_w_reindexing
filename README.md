@@ -8,7 +8,7 @@ This repository provides scripts, documentation, and examples for resolving mapp
 
 ## Background
 
-Based on the blog post **"Reindexing Data Streams Due to Mapping Conflicts"** by **Lisa Larribas**, Consulting Architect, Federal at Elastic, this repository demonstrates the complete workflow for:
+Based on the blog post **"Reindexing Data Streams Due to Mapping Conflicts"** by **Lisa Larribas**, Consulting Architect at Elastic, this repository demonstrates the complete workflow for:
 
 - Identifying mapping conflicts in data views
 - Preparing correct mappings using component templates
@@ -56,6 +56,31 @@ Mapping conflicts typically occur when:
 6. **Update data stream** to include new backing index
 7. **Apply ILM policy** to manage index lifecycle
 8. **Delete old backing index** after verification
+
+## Quick Start
+
+### Setup Practice Environment
+
+To quickly create a practice environment with intentional mapping conflicts:
+
+```bash
+cd scripts
+./setup-example-environment.sh
+```
+
+This script will:
+- Create an ILM policy for log data
+- Set up component templates and index templates
+- Create a data stream with mapping conflicts
+- Ingest sample documents
+- Verify the environment is ready
+
+**What gets created:**
+- Data stream: `logs-filestream.generic-default`
+- Mapping conflict: `log.offset` mapped as `keyword` (should be `long`)
+- 10 sample documents across 2 backing indices
+
+After running the setup script, follow the **Basic Reindexing Workflow** below to practice resolving the conflict.
 
 ## Usage
 
@@ -135,15 +160,13 @@ DELETE .ds-logs-filestream.generic-default-2025.04.30-000001
 solving_mapping_conflicts_w_reindexing/
 ├── README.md                          # This file
 ├── PREREQUISITES.md                   # Setup requirements
-├── examples/                          # Example scenarios
+├── scripts/                           # Setup and automation scripts
+│   └── setup-example-environment.sh  # Create practice environment
+├── examples/                          # Example scenarios (planned)
 │   ├── ecs-field-conflict/           # ECS field mapping conflicts
 │   ├── custom-field-conflict/        # Custom field conflicts
 │   └── multiple-conflicts/           # Handling multiple fields
-├── scripts/                           # Automation scripts
-│   ├── detect-conflicts.sh           # Find conflicts in data views
-│   ├── reindex-template.sh           # Reindexing automation
-│   └── verify-mappings.sh            # Post-reindex validation
-└── templates/                         # Component template examples
+└── templates/                         # Component template examples (planned)
     ├── custom-template-examples.json
     └── dynamic-template-examples.json
 ```
@@ -217,4 +240,4 @@ For issues or questions:
 
 Based on work by Lisa Larribas, Consulting Architect, Federal at Elastic
 
-Maintained by the Elastic Solutions Architecture team
+Maintained Brian Mayrose
