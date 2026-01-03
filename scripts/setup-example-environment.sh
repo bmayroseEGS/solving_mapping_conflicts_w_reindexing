@@ -236,25 +236,75 @@ done
 print_info "✓ Ingested 5 documents with log.offset as long (numeric values)"
 echo ""
 
-# Rollover to create second backing index
-echo "Step 2: Rolling over to create second backing index..."
+# Create second backing index manually with keyword mapping
+echo "Step 2: Creating second backing index with keyword mapping..."
 
+# Get the current backing index name to generate the next one
+FIRST_INDEX=$(curl -s -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
+  "$ELASTICSEARCH_URL/_data_stream/logs-filestream.generic-default" | \
+  grep -o '"name":"\.ds-logs-filestream\.generic-default-[^"]*"' | head -1 | cut -d'"' -f4)
+
+# Extract the date part and increment the index number
+INDEX_BASE=$(echo "$FIRST_INDEX" | sed 's/-[0-9]*$//')
+SECOND_INDEX="${INDEX_BASE}-000002"
+
+echo "Creating backing index: $SECOND_INDEX"
+
+# Create the second backing index with explicit keyword mapping for log.offset
+curl -s -X PUT -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
+  "$ELASTICSEARCH_URL/$SECOND_INDEX" \
+  -H "Content-Type: application/json" \
+  -d "{
+  \"mappings\": {
+    \"properties\": {
+      \"@timestamp\": { \"type\": \"date\" },
+      \"message\": { \"type\": \"text\" },
+      \"host\": {
+        \"properties\": {
+          \"name\": { \"type\": \"keyword\" }
+        }
+      },
+      \"event\": {
+        \"properties\": {
+          \"dataset\": { \"type\": \"keyword\" }
+        }
+      },
+      \"log\": {
+        \"properties\": {
+          \"offset\": { \"type\": \"keyword\" }
+        }
+      }
+    }
+  }
+}" >/dev/null
+
+# Add the new backing index to the data stream
 curl -s -X POST -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
-  "$ELASTICSEARCH_URL/logs-filestream.generic-default/_rollover" >/dev/null
+  "$ELASTICSEARCH_URL/_data_stream/_modify" \
+  -H "Content-Type: application/json" \
+  -d "{
+  \"actions\": [
+    {
+      \"add_backing_index\": {
+        \"data_stream\": \"logs-filestream.generic-default\",
+        \"index\": \"$SECOND_INDEX\"
+      }
+    }
+  ]
+}" >/dev/null
 
-sleep 2
-print_info "✓ Data stream rolled over"
+print_info "✓ Second backing index created with keyword mapping"
 echo ""
 
 ################################################################################
-# Create Second Backing Index with INCORRECT Mapping (keyword)
+# Ingest data into second backing index
 ################################################################################
-echo "Step 3: Ingesting documents with log.offset as keyword (CONFLICT!)..."
+echo "Step 3: Ingesting documents into second backing index..."
 
-# Ingest documents with string values - Elasticsearch will map as keyword
+# Ingest directly into the second backing index with string values
 for i in {6..10}; do
   curl -s -X POST -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
-    "$ELASTICSEARCH_URL/logs-filestream.generic-default/_doc" \
+    "$ELASTICSEARCH_URL/$SECOND_INDEX/_doc" \
     -H "Content-Type: application/json" \
     -d "{
     \"@timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",
