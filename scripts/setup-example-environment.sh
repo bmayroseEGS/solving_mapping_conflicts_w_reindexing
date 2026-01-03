@@ -211,9 +211,11 @@ print_header "Creating Data Stream with Mapping Conflict"
 
 echo "Step 1: Ingesting documents to create first backing index with text mapping..."
 
-# Ingest documents with string values - Elasticsearch will dynamically map as text+keyword
+# Ingest documents with string representations of numbers
+# Elasticsearch will dynamically map as text+keyword since they're quoted strings
 # This simulates data arriving BEFORE proper mappings were defined
 for i in {1..5}; do
+  OFFSET=$((900000 + i * 10000))
   curl -s -X POST -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
     "$ELASTICSEARCH_URL/logs-filestream.generic-default/_doc" \
     -H "Content-Type: application/json" \
@@ -221,7 +223,7 @@ for i in {1..5}; do
     \"@timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",
     \"message\": \"Log message $i from first batch\",
     \"log\": {
-      \"offset\": \"offset_$i\"
+      \"offset\": \"$OFFSET\"
     },
     \"host\": {
       \"name\": \"server-01\"
@@ -305,9 +307,9 @@ echo ""
 ################################################################################
 echo "Step 3: Ingesting documents into second backing index..."
 
-# Ingest directly into the second backing index with numeric values
+# Ingest directly into the second backing index with actual numeric values (not strings)
 for i in {6..10}; do
-  OFFSET=$((1000 + i * 100))
+  OFFSET=$((950000 + i * 10000))
   curl -s -X POST -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
     "$ELASTICSEARCH_URL/$SECOND_INDEX/_doc" \
     -H "Content-Type: application/json" \
