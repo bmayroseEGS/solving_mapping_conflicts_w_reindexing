@@ -242,10 +242,14 @@ echo "Step 2: Creating second backing index with long mapping..."
 # Get the current backing index name to generate the next one
 FIRST_INDEX=$(curl -s -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
   "$ELASTICSEARCH_URL/_data_stream/logs-filestream.generic-default" | \
-  grep -o '"name":"\.ds-logs-filestream\.generic-default-[^"]*"' | head -1 | cut -d'"' -f4)
+  grep -o '\.ds-logs-filestream\.generic-default-[0-9]\{4\}\.[0-9]\{2\}\.[0-9]\{2\}-[0-9]\{6\}' | head -1)
 
-# Extract the date part and increment the index number
-INDEX_BASE=$(echo "$FIRST_INDEX" | sed 's/-[0-9]*$//')
+echo "First backing index: $FIRST_INDEX"
+
+# Extract the date part and create second index name
+# Format: .ds-logs-filestream.generic-default-YYYY.MM.DD-000001
+# We want: .ds-logs-filestream.generic-default-YYYY.MM.DD-000002
+INDEX_BASE=$(echo "$FIRST_INDEX" | sed 's/-[0-9]\{6\}$//')
 SECOND_INDEX="${INDEX_BASE}-000002"
 
 echo "Creating backing index: $SECOND_INDEX"
