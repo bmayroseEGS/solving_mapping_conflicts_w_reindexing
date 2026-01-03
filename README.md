@@ -82,6 +82,22 @@ This script will:
 
 After running the setup script, follow the **Basic Reindexing Workflow** below to practice resolving the conflict.
 
+### Reset Practice Environment
+
+To reset the environment back to the initial conflicted state (useful for practicing multiple times):
+
+```bash
+cd scripts
+./reset-example-environment.sh
+```
+
+This script will:
+- Delete the data stream and all backing indices
+- Clean up any reindexed indices you created during practice
+- Remove any @custom component templates you added
+- Preserve the base @package template and ILM policy
+- Recreate the initial conflicted state automatically
+
 ## Usage
 
 ### Basic Reindexing Workflow
@@ -161,7 +177,8 @@ solving_mapping_conflicts_w_reindexing/
 ├── README.md                          # This file
 ├── PREREQUISITES.md                   # Setup requirements
 ├── scripts/                           # Setup and automation scripts
-│   └── setup-example-environment.sh  # Create practice environment
+│   ├── setup-example-environment.sh  # Create practice environment
+│   └── reset-example-environment.sh  # Reset to initial state
 ├── examples/                          # Example scenarios (planned)
 │   ├── ecs-field-conflict/           # ECS field mapping conflicts
 │   ├── custom-field-conflict/        # Custom field conflicts
