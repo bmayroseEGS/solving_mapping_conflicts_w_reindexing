@@ -137,10 +137,10 @@ echo ""
 ################################################################################
 print_header "Creating @package Component Template"
 
-echo "Creating logs@package component template with ECS mappings..."
+echo "Creating logs-filestream.generic@package component template with ECS mappings..."
 
 curl -s -X PUT -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
-  "$ELASTICSEARCH_URL/_component_template/logs@package" \
+  "$ELASTICSEARCH_URL/_component_template/logs-filestream.generic@package" \
   -H "Content-Type: application/json" \
   -d '{
   "template": {
@@ -179,7 +179,7 @@ curl -s -X PUT -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
   }
 }' >/dev/null
 
-print_info "✓ Component template 'logs@package' created"
+print_info "✓ Component template 'logs-filestream.generic@package' created"
 echo ""
 
 ################################################################################
@@ -195,7 +195,7 @@ curl -s -X PUT -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
   -d '{
   "index_patterns": ["logs-filestream.generic-default*"],
   "data_stream": {},
-  "composed_of": ["logs@package"],
+  "composed_of": ["logs-filestream.generic@package"],
   "priority": 200,
   "_meta": {
     "description": "Index template for generic filestream logs"
@@ -428,7 +428,7 @@ echo -e "${GREEN}✓ Practice environment is ready!${NC}"
 echo ""
 echo "What was created:"
 echo "  • ILM policy: 'logs' (hot/warm/cold/delete phases)"
-echo "  • Component template: 'logs@package'"
+echo "  • Component template: 'logs-filestream.generic@package'"
 echo "  • Index template: 'logs-filestream.generic-default'"
 echo "  • Data stream: 'logs-filestream.generic-default'"
 echo "  • $BACKING_INDICES backing indices with $TOTAL_DOCS total documents"
@@ -454,10 +454,10 @@ echo ""
 echo "Practice the resolution workflow:"
 echo "  1. Review: ../README.md for the complete reindexing procedure"
 echo "  2. The goal: Make all indices use 'long' type for log.offset (ECS standard)"
-echo "  3. Create @custom component template with correct 'long' mapping"
-echo "  4. Reindex the FIRST backing index (keyword) to use 'long'"
+echo "  3. Create logs-filestream.generic@custom component template with correct 'long' mapping"
+echo "  4. Reindex the FIRST backing index (text) to use 'long'"
 echo "  5. Verify document counts match"
-echo "  6. Delete old backing index with keyword mapping"
+echo "  6. Delete old backing index with text mapping"
 echo ""
 echo "Useful commands:"
 echo ""

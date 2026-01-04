@@ -158,7 +158,7 @@ print_header "Cleaning Up @custom Component Templates"
 echo "Checking for @custom component templates..."
 
 CUSTOM_TEMPLATES=$(curl -s -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
-    "$ELASTICSEARCH_URL/_component_template" | grep -o '"logs@custom[^"]*"' | tr -d '"' || echo "")
+    "$ELASTICSEARCH_URL/_component_template" | grep -o '"logs-filestream\.generic@custom[^"]*"' | tr -d '"' || echo "")
 
 if [ -n "$CUSTOM_TEMPLATES" ]; then
     echo "$CUSTOM_TEMPLATES" | while read -r template; do
@@ -200,7 +200,7 @@ fi
 
 # Verify @package template still exists
 if curl -sf -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
-    "$ELASTICSEARCH_URL/_component_template/logs@package" >/dev/null 2>&1; then
+    "$ELASTICSEARCH_URL/_component_template/logs-filestream.generic@package" >/dev/null 2>&1; then
     print_info "✓ Base @package template preserved"
 else
     print_warning "Base @package template not found (will be recreated)"
