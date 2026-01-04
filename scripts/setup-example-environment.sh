@@ -174,7 +174,8 @@ curl -s -X PUT -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
   },
   "version": 1,
   "_meta": {
-    "description": "Package mappings for filestream logs"
+    "description": "Package mappings for filestream logs",
+    "managed": false
   }
 }' >/dev/null
 
