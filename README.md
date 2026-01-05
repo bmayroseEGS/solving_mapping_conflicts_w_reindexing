@@ -78,12 +78,12 @@ This script will:
 **What gets created:**
 - Data stream: `logs-filestream.generic-default`
 - Mapping conflict: `log.offset` has different types across backing indices
-  - First backing index: `log.offset` as `text` (incorrect - from dynamic mapping)
+  - First backing index: `log.offset` as `keyword` (incorrect - from dynamic mapping)
   - Second backing index: `log.offset` as `long` (correct per ECS)
 - 10 sample documents (5 in each backing index)
 
 **Why this scenario?**
-This matches the blog's real-world scenario where data was ingested BEFORE proper mappings were defined in a @custom component template. Elasticsearch used dynamic templates and incorrectly mapped `log.offset` as `text` (with a `.keyword` subfield). Later, when correct mappings were added, newer backing indices got the proper `long` type.
+This matches the blog's real-world scenario where data was ingested BEFORE proper mappings were defined in a @custom component template. Elasticsearch used dynamic templates and incorrectly mapped `log.offset` as `keyword` (the `all_strings_to_keywords` dynamic template matched string values). Later, when correct mappings were added, newer backing indices got the proper `long` type.
 
 After running the setup script, follow the **Basic Reindexing Workflow** below to practice resolving the conflict.
 
