@@ -228,7 +228,8 @@ curl -s -X PUT -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
   -H "Content-Type: application/json" \
   -d "{
   \"settings\": {
-    \"index.hidden\": true
+    \"index.hidden\": true,
+    \"index.mode\": null
   },
   \"mappings\": {
     \"properties\": {

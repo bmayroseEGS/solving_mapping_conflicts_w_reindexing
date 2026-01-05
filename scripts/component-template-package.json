@@ -1,7 +1,8 @@
 {
   "template": {
     "settings": {
-      "index.lifecycle.name": "logs"
+      "index.lifecycle.name": "logs",
+      "index.mode": null
     },
     "mappings": {
       "dynamic_templates": [
