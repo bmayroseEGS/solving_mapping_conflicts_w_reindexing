@@ -201,7 +201,7 @@ for i in {1..5}; do
       \"name\": \"server-01\"
     },
     \"event\": {
-      \"dataset\": \"generic.log\"
+      \"dataset\": \"filestream.generic\"
     }
   }" >/dev/null
   sleep 0.1
@@ -293,7 +293,7 @@ for i in {6..10}; do
       \"name\": \"server-02\"
     },
     \"event\": {
-      \"dataset\": \"generic.log\"
+      \"dataset\": \"filestream.generic\"
     }
   }" >/dev/null
   sleep 0.1
