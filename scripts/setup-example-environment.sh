@@ -278,10 +278,11 @@ echo ""
 echo "Step 3: Ingesting documents into second backing index..."
 
 # Ingest data directly into the second backing index with numeric values
+# Use op_type=index to allow writing to backing indices
 for i in {6..10}; do
   OFFSET=$((950000 + i * 10000))
-  curl -s -X POST -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
-    "$ELASTICSEARCH_URL/$SECOND_INDEX/_doc?refresh=true" \
+  curl -s -X PUT -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
+    "$ELASTICSEARCH_URL/$SECOND_INDEX/_doc/$i?refresh=true" \
     -H "Content-Type: application/json" \
     -d "{
     \"@timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",
