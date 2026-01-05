@@ -275,22 +275,30 @@ curl -s -X POST -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
 print_info "✓ Created second backing index: $SECOND_INDEX"
 echo ""
 
-echo "Step 3: Ingesting documents into second backing index..."
+echo "Step 3: Ingesting documents into data stream (will go to second backing index)..."
 
-# Ingest data directly into the second backing index with numeric values using bulk API
-# Build bulk request body
-BULK_DATA=""
+# Ingest data to the data stream - it will route to the write index (second backing index)
+# Using numeric values (not strings) so they use the long mapping
 for i in {6..10}; do
   OFFSET=$((950000 + i * 10000))
-  BULK_DATA="${BULK_DATA}{\"index\":{\"_index\":\"$SECOND_INDEX\"}}\n"
-  BULK_DATA="${BULK_DATA}{\"@timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",\"message\":\"Log message $i from second batch\",\"log\":{\"offset\":$OFFSET},\"host\":{\"name\":\"server-02\"},\"event\":{\"dataset\":\"filestream.generic\"}}\n"
+  curl -s -X POST -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
+    "$ELASTICSEARCH_URL/logs-filestream.generic-default/_doc" \
+    -H "Content-Type: application/json" \
+    -d "{
+    \"@timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",
+    \"message\": \"Log message $i from second batch\",
+    \"log\": {
+      \"offset\": $OFFSET
+    },
+    \"host\": {
+      \"name\": \"server-02\"
+    },
+    \"event\": {
+      \"dataset\": \"filestream.generic\"
+    }
+  }" >/dev/null
+  sleep 0.1
 done
-
-# Send bulk request
-echo -e "$BULK_DATA" | curl -s -X POST -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
-  "$ELASTICSEARCH_URL/_bulk?refresh=true" \
-  -H "Content-Type: application/x-ndjson" \
-  --data-binary @- >/dev/null
 
 print_info "✓ Ingested 5 documents with log.offset as long (numeric values)"
 print_warning "  MAPPING CONFLICT CREATED!"
