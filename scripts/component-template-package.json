@@ -1,0 +1,121 @@
+{
+  "template": {
+    "settings": {
+      "index.lifecycle.name": "logs"
+    },
+    "mappings": {
+      "dynamic_templates": [
+        {
+          "ecs_timestamp": {
+            "mapping": {
+              "ignore_malformed": false,
+              "type": "date"
+            },
+            "match": "@timestamp"
+          }
+        },
+        {
+          "ecs_message_match_only_text": {
+            "path_match": [
+              "message",
+              "*.message"
+            ],
+            "mapping": {
+              "type": "match_only_text"
+            },
+            "unmatch_mapping_type": "object"
+          }
+        },
+        {
+          "ecs_non_indexed_keyword": {
+            "path_match": [
+              "*event.original"
+            ],
+            "mapping": {
+              "index": false,
+              "type": "keyword",
+              "doc_values": false
+            }
+          }
+        },
+        {
+          "all_strings_to_keywords": {
+            "mapping": {
+              "ignore_above": 1024,
+              "type": "keyword"
+            },
+            "match_mapping_type": "string"
+          }
+        }
+      ],
+      "properties": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "ignore_above": 1024,
+              "type": "keyword"
+            }
+          }
+        },
+        "@timestamp": {
+          "ignore_malformed": false,
+          "type": "date"
+        },
+        "ecs": {
+          "type": "object",
+          "properties": {
+            "version": {
+              "ignore_above": 1024,
+              "type": "keyword"
+            }
+          }
+        },
+        "data_stream": {
+          "type": "object",
+          "properties": {
+            "namespace": {
+              "type": "constant_keyword"
+            },
+            "type": {
+              "type": "constant_keyword"
+            },
+            "dataset": {
+              "type": "constant_keyword"
+            }
+          }
+        },
+        "event": {
+          "type": "object",
+          "properties": {
+            "original": {
+              "index": false,
+              "type": "keyword",
+              "doc_values": false
+            },
+            "module": {
+              "type": "constant_keyword",
+              "value": "filestream"
+            },
+            "dataset": {
+              "type": "constant_keyword",
+              "value": "filestream.generic"
+            }
+          }
+        },
+        "message": {
+          "type": "match_only_text"
+        },
+        "tags": {
+          "ignore_above": 1024,
+          "type": "keyword"
+        }
+      }
+    }
+  },
+  "version": 1,
+  "_meta": {
+    "description": "Package mappings for filestream logs",
+    "managed": false
+  }
+}

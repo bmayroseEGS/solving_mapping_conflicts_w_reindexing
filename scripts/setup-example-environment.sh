@@ -139,45 +139,13 @@ print_header "Creating @package Component Template"
 
 echo "Creating logs-filestream.generic@package component template with ECS mappings..."
 
+# Get the script directory to locate the template file
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 curl -s -X PUT -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
   "$ELASTICSEARCH_URL/_component_template/logs-filestream.generic@package" \
   -H "Content-Type: application/json" \
-  -d '{
-  "template": {
-    "settings": {
-      "index.lifecycle.name": "logs"
-    },
-    "mappings": {
-      "properties": {
-        "@timestamp": {
-          "type": "date"
-        },
-        "message": {
-          "type": "text"
-        },
-        "host": {
-          "properties": {
-            "name": {
-              "type": "keyword"
-            }
-          }
-        },
-        "event": {
-          "properties": {
-            "dataset": {
-              "type": "keyword"
-            }
-          }
-        }
-      }
-    }
-  },
-  "version": 1,
-  "_meta": {
-    "description": "Package mappings for filestream logs",
-    "managed": false
-  }
-}' >/dev/null
+  -d @"$SCRIPT_DIR/component-template-package.json" >/dev/null
 
 print_info "✓ Component template 'logs-filestream.generic@package' created"
 echo ""
