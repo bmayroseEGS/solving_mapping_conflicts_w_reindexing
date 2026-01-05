@@ -163,6 +163,11 @@ curl -s -X PUT -u "$ELASTICSEARCH_USER:$ELASTICSEARCH_PASSWORD" \
   -d '{
   "index_patterns": ["logs-filestream.generic-default*"],
   "data_stream": {},
+  "template": {
+    "settings": {
+      "index.mode": "standard"
+    }
+  },
   "composed_of": ["logs-filestream.generic@package"],
   "priority": 200,
   "_meta": {
